@@ -19,11 +19,11 @@ import { RootStackParamList } from '../types';
 import { formatEventDate } from '../utils/dateUtils';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
-type RouteProp = RouteProp<RootStackParamList, 'EventDetails'>;
+type EventDetailsRouteProp = RouteProp<RootStackParamList, 'EventDetails'>;
 
 export const EventDetailsScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
-  const route = useRoute<RouteProp>();
+  const route = useRoute<EventDetailsRouteProp>();
   const { eventId } = route.params;
   
   const { events, currentUser, rsvps, addRSVP, updateRSVP } = useEventStore();
