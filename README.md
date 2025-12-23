@@ -65,19 +65,19 @@ npm run web
 3. **Create Event**: Form to create new events with validation
 4. **Profile**: View your events and RSVP history
 
-## Ready for Production
+<!-- ## Ready for Production
 
 - Mock data can be easily replaced with API calls
 - Store pattern makes backend integration straightforward
 - TypeScript ensures type safety throughout
-- Components are reusable and well-structured
+- Components are reusable and well-structured -->
 
-## Interview Talking Points
+<!-- ## Interview Talking Points
 
 - Demonstrates React Native expertise
 - Shows understanding of state management patterns
 - Event/commerce platform experience
 - Clean, maintainable code structure
-- Ready for real-world implementation
+- Ready for real-world implementation -->
 
 # rsvp-events-demo
