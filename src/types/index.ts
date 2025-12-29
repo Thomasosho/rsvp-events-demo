@@ -41,6 +41,8 @@ export interface User {
 }
 
 export type RootStackParamList = {
+  Login: undefined;
+  SignUp: undefined;
   Home: undefined;
   EventDetails: { eventId: string };
   CreateEvent: undefined;

@@ -1,83 +1,32 @@
 # RSVP Events Demo
 
-A React Native application for discovering and managing events with RSVP functionality. Built to demonstrate expertise in React Native, state management, and event/commerce platforms.
+A React Native mobile app for discovering and managing events. Users can browse events, RSVP with different statuses (Going, Maybe, Can't Go), create their own events, and view their event history.
 
-## Features
+## Environment Setup
 
-- **Event Discovery**: Browse events by category, location, and date
-- **RSVP Management**: RSVP to events with status (Going, Maybe, Can't Go)
-- **Event Creation**: Create new events with details, location, and capacity
-- **User Profile**: View created events and RSVP history
-- **Real-time Updates**: Optimistic UI updates for instant feedback
+Create a `.env` file in the root directory with your Firebase and Cloudinary credentials:
 
-## Tech Stack
+```env
+# Firebase Configuration (required)
+EXPO_PUBLIC_FIREBASE_API_KEY=your-firebase-api-key
+EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+EXPO_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
+EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
+EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
+EXPO_PUBLIC_FIREBASE_APP_ID=your-app-id
 
-- **React Native** with Expo
-- **TypeScript** for type safety
-- **Zustand** for state management
-- **React Navigation** for navigation
-- **date-fns** for date formatting
-- **Expo Vector Icons** for icons
-
-## Project Structure
-
-```
-src/
-  components/     # Reusable UI components (EventCard)
-  screens/        # Screen components (Home, EventDetails, CreateEvent, Profile)
-  store/          # Zustand state management
-  data/           # Mock data
-  types/          # TypeScript type definitions
-  utils/          # Helper functions (date formatting)
+# Cloudinary Configuration (required for image uploads)
+EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME=your-cloud-name
+EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET=your-upload-preset
+EXPO_PUBLIC_CLOUDINARY_API_KEY=your-api-key
 ```
 
-## Key Technical Decisions
-
-1. **State Management**: Used Zustand for lightweight, performant state management
-2. **Navigation**: React Navigation Native Stack for smooth navigation
-3. **Type Safety**: Full TypeScript implementation for reliability
-4. **Component Architecture**: Reusable components with clear separation of concerns
-5. **Performance**: Optimized list rendering and memoization
-
-## Running the Project
+## Getting Started
 
 ```bash
 # Install dependencies
 npm install
 
-# Start Expo
+# Start the app
 npm start
-
-# Run on iOS
-npm run ios
-
-# Run on Android
-npm run android
-
-# Run on Web
-npm run web
 ```
-
-## Demo Walkthrough
-
-1. **Home Screen**: Browse events, see upcoming events sorted by date
-2. **Event Details**: View full event information, RSVP with status
-3. **Create Event**: Form to create new events with validation
-4. **Profile**: View your events and RSVP history
-
-<!-- ## Ready for Production
-
-- Mock data can be easily replaced with API calls
-- Store pattern makes backend integration straightforward
-- TypeScript ensures type safety throughout
-- Components are reusable and well-structured -->
-
-<!-- ## Interview Talking Points
-
-- Demonstrates React Native expertise
-- Shows understanding of state management patterns
-- Event/commerce platform experience
-- Clean, maintainable code structure
-- Ready for real-world implementation -->
-
-# rsvp-events-demo

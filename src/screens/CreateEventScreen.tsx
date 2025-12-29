@@ -8,19 +8,22 @@ import {
   TouchableOpacity,
   Platform,
   Alert,
+  Image,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useEventStore } from '../store/eventStore';
-import { RootStackParamList, Event } from '../types';
+import { storageService } from '../services/storageService';
+import { RootStackParamList } from '../types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export const CreateEventScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
-  const { addEvent, currentUser } = useEventStore();
+  const { addEvent, currentUser, loading } = useEventStore();
 
   const [formData, setFormData] = useState({
     title: '',
@@ -31,10 +34,23 @@ export const CreateEventScreen: React.FC = () => {
     category: 'Technology',
     maxAttendees: '',
   });
+  const [imageUri, setImageUri] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   const categories = ['Technology', 'Networking', 'Business', 'Social', 'Education', 'Other'];
 
-  const handleSubmit = () => {
+  const handlePickImage = async () => {
+    try {
+      const uri = await storageService.pickImage();
+      if (uri) {
+        setImageUri(uri);
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to pick image');
+    }
+  };
+
+  const handleSubmit = async () => {
     if (!formData.title || !formData.description || !formData.date || !formData.time || !formData.location) {
       Alert.alert('Error', 'Please fill in all required fields');
       return;
@@ -45,29 +61,43 @@ export const CreateEventScreen: React.FC = () => {
       return;
     }
 
-    const newEvent: Event = {
-      id: `event-${Date.now()}`,
-      title: formData.title,
-      description: formData.description,
-      date: formData.date,
-      time: formData.time,
-      location: formData.location,
-      organizer: {
-        id: currentUser.id,
-        name: currentUser.name,
-        avatar: currentUser.avatar,
-      },
-      rsvpCount: 0,
-      maxAttendees: formData.maxAttendees ? parseInt(formData.maxAttendees) : undefined,
-      category: formData.category,
-      tags: [],
-      createdAt: new Date().toISOString(),
-    };
+    setUploading(true);
+    try {
+      let imageUrl: string | undefined;
+      
+      // Upload image if selected
+      if (imageUri) {
+        // Create a temporary event ID for the image path
+        const tempEventId = `temp-${Date.now()}`;
+        imageUrl = await storageService.uploadEventImage(imageUri, tempEventId);
+      }
 
-    addEvent(newEvent);
-    Alert.alert('Success', 'Event created successfully!', [
-      { text: 'OK', onPress: () => navigation.goBack() },
-    ]);
+      // Create event (Firebase will generate the ID)
+      await addEvent({
+        title: formData.title,
+        description: formData.description,
+        date: formData.date,
+        time: formData.time,
+        location: formData.location,
+        organizer: {
+          id: currentUser.id,
+          name: currentUser.name,
+          avatar: currentUser.avatar,
+        },
+        maxAttendees: formData.maxAttendees ? parseInt(formData.maxAttendees) : undefined,
+        category: formData.category,
+        tags: [],
+        imageUrl,
+      });
+
+      Alert.alert('Success', 'Event created successfully!', [
+        { text: 'OK', onPress: () => navigation.goBack() },
+      ]);
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to create event');
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
@@ -138,6 +168,29 @@ export const CreateEventScreen: React.FC = () => {
           </View>
 
           <View style={styles.inputGroup}>
+            <Text style={styles.label}>Event Image (Optional)</Text>
+            {imageUri ? (
+              <View style={styles.imageContainer}>
+                <Image source={{ uri: imageUri }} style={styles.previewImage} />
+                <TouchableOpacity
+                  style={styles.removeImageButton}
+                  onPress={() => setImageUri(null)}
+                >
+                  <Ionicons name="close-circle" size={24} color="#ff4444" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={styles.imagePickerButton}
+                onPress={handlePickImage}
+              >
+                <Ionicons name="image-outline" size={32} color="#4ECDC4" />
+                <Text style={styles.imagePickerText}>Pick an image</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <View style={styles.inputGroup}>
             <Text style={styles.label}>Category</Text>
             <View style={styles.categoryContainer}>
               {categories.map((category) => (
@@ -176,8 +229,16 @@ export const CreateEventScreen: React.FC = () => {
       </ScrollView>
 
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-          <Text style={styles.submitButtonText}>Create Event</Text>
+        <TouchableOpacity
+          style={[styles.submitButton, (loading || uploading) && styles.submitButtonDisabled]}
+          onPress={handleSubmit}
+          disabled={loading || uploading}
+        >
+          {loading || uploading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.submitButtonText}>Create Event</Text>
+          )}
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -268,6 +329,40 @@ const styles = StyleSheet.create({
   categoryButtonTextActive: {
     color: '#fff',
   },
+  imageContainer: {
+    position: 'relative',
+    marginTop: 8,
+  },
+  previewImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 12,
+    resizeMode: 'cover',
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 20,
+    padding: 4,
+  },
+  imagePickerButton: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 12,
+    padding: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#e0e0e0',
+    borderStyle: 'dashed',
+    marginTop: 8,
+  },
+  imagePickerText: {
+    marginTop: 8,
+    fontSize: 14,
+    color: '#666',
+  },
   footer: {
     padding: 20,
     backgroundColor: '#fff',
@@ -293,6 +388,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#fff',
+  },
+  submitButtonDisabled: {
+    opacity: 0.6,
   },
 });
 

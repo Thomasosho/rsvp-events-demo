@@ -26,7 +26,7 @@ export const EventDetailsScreen: React.FC = () => {
   const route = useRoute<EventDetailsRouteProp>();
   const { eventId } = route.params;
   
-  const { events, currentUser, rsvps, addRSVP, updateRSVP } = useEventStore();
+  const { events, currentUser, rsvps, setRSVP, loadRSVPs, loading } = useEventStore();
   const event = events.find((e) => e.id === eventId);
   
   const userRSVP = rsvps.find(
@@ -36,6 +36,12 @@ export const EventDetailsScreen: React.FC = () => {
   const [rsvpStatus, setRsvpStatus] = useState<'going' | 'maybe' | 'not-going' | null>(
     userRSVP?.status || null
   );
+
+  React.useEffect(() => {
+    if (eventId) {
+      loadRSVPs(eventId);
+    }
+  }, [eventId]);
 
   if (!event) {
     return (
@@ -47,28 +53,25 @@ export const EventDetailsScreen: React.FC = () => {
     );
   }
 
-  const handleRSVP = (status: 'going' | 'maybe' | 'not-going') => {
+  const handleRSVP = async (status: 'going' | 'maybe' | 'not-going') => {
     if (!currentUser) {
       Alert.alert('Error', 'Please log in to RSVP');
       return;
     }
 
-    if (userRSVP) {
-      updateRSVP(userRSVP.id, status);
-    } else {
-      const newRSVP = {
-        id: `rsvp-${Date.now()}`,
-        eventId: event.id,
-        userId: currentUser.id,
-        userName: currentUser.name,
-        userAvatar: currentUser.avatar,
-        status,
-        createdAt: new Date().toISOString(),
-      };
-      addRSVP(newRSVP);
+    if (!event) {
+      Alert.alert('Error', 'Event not found');
+      return;
     }
-    setRsvpStatus(status);
-    Alert.alert('Success', `You've marked yourself as ${status === 'going' ? 'going' : status === 'maybe' ? 'maybe' : 'not going'}`);
+
+    try {
+      await setRSVP(event.id, status);
+      setRsvpStatus(status);
+      await loadRSVPs(event.id);
+      Alert.alert('Success', `You've marked yourself as ${status === 'going' ? 'going' : status === 'maybe' ? 'maybe' : 'not going'}`);
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to update RSVP');
+    }
   };
 
   return (

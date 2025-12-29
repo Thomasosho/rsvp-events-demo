@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,8 @@ import {
   FlatList,
   TouchableOpacity,
   Platform,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,7 +16,6 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useEventStore } from '../store/eventStore';
 import { EventCard } from '../components/EventCard';
 import { RootStackParamList } from '../types';
-import { format } from 'date-fns';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -22,8 +23,25 @@ type TabType = 'all' | 'my-rsvps';
 
 export const HomeScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
-  const { events, currentUser, getUserRSVPs } = useEventStore();
+  const { events, currentUser, getUserRSVPs, loadEvents, loadRSVPs, loading } = useEventStore();
   const [activeTab, setActiveTab] = useState<TabType>('all');
+  const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    loadEvents();
+    if (currentUser) {
+      loadRSVPs(undefined, currentUser.id);
+    }
+  }, [currentUser]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadEvents();
+    if (currentUser) {
+      await loadRSVPs(undefined, currentUser.id);
+    }
+    setRefreshing(false);
+  };
 
   const filteredEvents = useMemo(() => {
     if (activeTab === 'my-rsvps' && currentUser) {
@@ -36,9 +54,19 @@ export const HomeScreen: React.FC = () => {
 
   const sortedEvents = useMemo(() => {
     return [...filteredEvents].sort((a, b) => {
-      const dateA = new Date(`${a.date}T${a.time}:00`);
-      const dateB = new Date(`${b.date}T${b.time}:00`);
-      return dateA.getTime() - dateB.getTime();
+      const dateA = new Date(`${a.date}T${a.time || '00:00'}:00`).getTime();
+      const dateB = new Date(`${b.date}T${b.time || '00:00'}:00`).getTime();
+      if (dateA !== dateB) {
+        return dateA - dateB; // Earliest first
+      }
+      // If dates/times are equal, sort by createdAt for consistency
+      const createdA = new Date(a.createdAt || 0).getTime();
+      const createdB = new Date(b.createdAt || 0).getTime();
+      if (createdA !== createdB) {
+        return createdA - createdB;
+      }
+      // If everything is equal, sort by ID for consistency
+      return a.id.localeCompare(b.id);
     });
   }, [filteredEvents]);
 
@@ -90,19 +118,28 @@ export const HomeScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
 
-      <FlatList
-        data={sortedEvents}
-        renderItem={renderEvent}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Ionicons name="calendar-outline" size={64} color="#ccc" />
-            <Text style={styles.emptyText}>No events found</Text>
-          </View>
-        }
-      />
+      {loading && !refreshing ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#4ECDC4" />
+        </View>
+      ) : (
+        <FlatList
+          data={sortedEvents}
+          renderItem={renderEvent}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <Ionicons name="calendar-outline" size={64} color="#ccc" />
+              <Text style={styles.emptyText}>No events found</Text>
+            </View>
+          }
+        />
+      )}
 
       <TouchableOpacity
         style={styles.fab}
@@ -188,6 +225,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#999',
     marginTop: 16,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
   },
   fab: {
     position: 'absolute',
